@@ -36,7 +36,6 @@ module.exports = function(source) {
 
 	var foundPartials = {};
 	var foundHelpers = {};
-	var foundUnclearStuff = {};
 	var knownHelpers = {};
 
 	var queryKnownHelpers = query.knownHelpers;
@@ -76,11 +75,6 @@ module.exports = function(source) {
 				return "require(" + JSON.stringify(foundHelpers["$" + name]) + ")";
 			}
 			foundHelpers["$" + name] = null;
-			return JavaScriptCompiler.prototype.nameLookup.apply(this, arguments);
-		}
-		else if (type === "context") {
-			// This could be a helper too, save it to check it later
-			if (!foundUnclearStuff["$" + name]) foundUnclearStuff["$" + name] = false;
 			return JavaScriptCompiler.prototype.nameLookup.apply(this, arguments);
 		}
 		else {
@@ -183,20 +177,6 @@ module.exports = function(source) {
 			resolveWithContexts();
 		};
 
-		var resolveUnclearStuffIterator = function(stuff, unclearStuffCallback) {
-			if (foundUnclearStuff[stuff]) return unclearStuffCallback();
-			var request = referenceToRequest(stuff.substr(1), 'unclearStuff');
-			resolve(request, 'unclearStuff', function(err, result) {
-				if (!err && result) {
-					knownHelpers[stuff.substr(1)] = true;
-					foundHelpers[stuff] = result;
-					needRecompile = true;
-				}
-				foundUnclearStuff[stuff] = true;
-				unclearStuffCallback();
-			});
-		};
-
 		var resolvePartialsIterator = function(partial, partialCallback) {
 			if (foundPartials[partial]) return partialCallback();
 			var request = referenceToRequest(partial.substr(1), 'partial');
@@ -270,20 +250,8 @@ module.exports = function(source) {
 			async.forEach(Object.keys(foundPartials), resolvePartialsIterator, doneResolving);
 		};
 
-		var resolveUnclearStuff = function(err) {
-			if (err) return resolvePartials(err);
-
-			if (debug) {
-				console.log("Attempting to resolve unclearStuff:");
-				console.log(foundUnclearStuff);
-			}
-
-			// Check for each found unclear item if it is a helper
-			async.forEach(Object.keys(foundUnclearStuff), resolveUnclearStuffIterator, resolvePartials);
-		};
-
 		var resolveHelpers = function(err) {
-			if (err) throw resolveUnclearStuff(err);
+			if (err) throw resolvePartials(err);
 
 			if (debug) {
 				console.log("Attempting to resolve helpers:");
@@ -291,7 +259,7 @@ module.exports = function(source) {
 			}
 
 			// Resolve path for each helper
-			async.forEach(Object.keys(foundHelpers), resolveHelpersIterator, resolveUnclearStuff);
+			async.forEach(Object.keys(foundHelpers), resolveHelpersIterator, resolvePartials);
 		};
 
 		resolveHelpers();
