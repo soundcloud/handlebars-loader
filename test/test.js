@@ -26,8 +26,8 @@ function applyTemplate(source, options) {
   options.test(null, _module.exports(options.data), _require);
 }
 
-function loadTemplate(templatePath) {
-  return fs.readFileSync(path.join(__dirname, templatePath)).toString();
+function loadTemplate(templateName) {
+  return fs.readFileSync(path.join(__dirname, 'templates', templateName + '.handlebars')).toString();
 }
 
 function testTemplate(loader, template, options, testFn) {
@@ -66,7 +66,7 @@ function getStubbedHandlebarsTemplateFunction() {
 describe('handlebars-loader', function () {
 
   it('should load simple handlebars templates', function (done) {
-    testTemplate(loader, './simple.handlebars', {
+    testTemplate(loader, 'simple', {
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
       assert.ok(output, 'generated output');
@@ -78,7 +78,7 @@ describe('handlebars-loader', function () {
   });
 
   it('should not require handlebars for empty templates', function (done) {
-    testTemplate(loader, './empty.handlebars', {
+    testTemplate(loader, 'empty', {
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
       assert.equal(require.callCount, 0);
@@ -87,7 +87,7 @@ describe('handlebars-loader', function () {
   });
 
   it('should convert helpers into require statements', function (done) {
-    testTemplate(loader, './with-helpers.handlebars', {
+    testTemplate(loader, 'with-helpers', {
       stubs: {
         'title': function (text) { return 'Title: ' + text; },
         './description': function (text) { return 'Description: ' + text; }
@@ -104,10 +104,10 @@ describe('handlebars-loader', function () {
   });
 
   it('should convert partials into require statements', function (done) {
-    testTemplate(loader, './with-partials.handlebars', {
+    testTemplate(loader, 'with-partials', {
       stubs: {
-        './partial': require('./partial.handlebars'),
-        'partial': require('./partial.handlebars')
+        './partial': require('./templates/partial.handlebars'),
+        'partial': require('./templates/partial.handlebars')
       },
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
@@ -121,7 +121,7 @@ describe('handlebars-loader', function () {
   });
 
   it('allows specifying additional helper search directory', function (done) {
-    testTemplate(loader, './with-dir-helpers.handlebars', {
+    testTemplate(loader, 'with-dir-helpers', {
       query: '?helperDirs[]=' + path.join(__dirname, 'helpers'),
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
@@ -131,7 +131,7 @@ describe('handlebars-loader', function () {
   });
 
   it('allows specifying multiple additional helper search directories', function (done) {
-    testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
+    testTemplate(loader, 'with-dir-helpers-multiple', {
       query: '?helperDirs[]=' + path.join(__dirname, 'helpers') + '&helperDirs[]=' + path.join(__dirname, 'helpers2'),
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
@@ -141,7 +141,7 @@ describe('handlebars-loader', function () {
   });
 
   it('allows specifying multiple additional helper search directories with object literal', function (done) {
-    testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
+    testTemplate(loader, 'with-dir-helpers-multiple', {
       query: {
         helperDirs: [
           path.join(__dirname, 'helpers'),
@@ -156,7 +156,7 @@ describe('handlebars-loader', function () {
   });
 
   it('allows specifying multiple additional helper search directories with JSON', function (done) {
-    testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
+    testTemplate(loader, 'with-dir-helpers-multiple', {
       query: '?' + JSON.stringify({
         helperDirs: [
           path.join(__dirname, 'helpers'),
@@ -171,7 +171,7 @@ describe('handlebars-loader', function () {
   });
 
   it('should find helpers in subdirectories', function (done) {
-    testTemplate(loader, './with-nested-helper.handlebars', {
+    testTemplate(loader, 'with-nested-helper', {
       query: '?helperDirs[]=' + path.join(__dirname, 'helpers'),
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
@@ -188,7 +188,7 @@ describe('handlebars-loader', function () {
       stubs['title'] = function (text) { return 'Title: ' + text; };
       stubs[relativeHelper] = function (text) { return 'Description: ' + text; };
 
-      testTemplate(loader, './with-helpers.handlebars', {
+      testTemplate(loader, 'with-helpers', {
         query: '?rootRelative=' + rootRelative,
         stubs: stubs,
         data: TEST_TEMPLATE_DATA
@@ -206,7 +206,7 @@ describe('handlebars-loader', function () {
   });
 
   it('allows specifying inline requires', function (done) {
-    testTemplate(loader, './with-inline-requires.handlebars', {
+    testTemplate(loader, 'with-inline-requires', {
       query: '?inlineRequires=^images\/',
       stubs: {
         './image': function (text) { return 'Image URL: ' + text; },
@@ -224,7 +224,7 @@ describe('handlebars-loader', function () {
     var templateStub = getStubbedHandlebarsTemplateFunction();
     var handlebarsAPI = { template: templateStub };
 
-    testTemplate(loader, './simple.handlebars', {
+    testTemplate(loader, 'simple', {
       query: '?runtime=handlebars/runtime.js', // runtime actually gets required() as part of version check, so we specify real path to runtime but specify the extension so we know loader is using our custom version.
       stubs: {
         'handlebars/runtime.js': {
@@ -251,7 +251,7 @@ describe('handlebars-loader', function () {
       return function (next) {
         var stubs = {};
         stubs[runtimePath] = api;
-        testTemplate(loader, './simple.handlebars', {
+        testTemplate(loader, 'simple', {
           stubs: stubs
         }, next);
       };
@@ -268,7 +268,7 @@ describe('handlebars-loader', function () {
   });
 
   it('properly catches errors in template syntax', function (done) {
-    testTemplate(loader, './invalid-syntax-error.handlebars', {}, function (err, output, require) {
+    testTemplate(loader, 'invalid-syntax-error', {}, function (err, output, require) {
       assert.ok(err, 'got error');
       assert.ok(err.message.indexOf('Parse error') >= 0, 'error was handlebars parse error');
       done();
@@ -276,7 +276,7 @@ describe('handlebars-loader', function () {
   });
 
   it('properly catches errors when unknown helper found', function (done) {
-    testTemplate(loader, './invalid-unknown-helpers.handlebars', {
+    testTemplate(loader, 'invalid-unknown-helpers', {
       stubs: {
         // A two-pass compile is required to see this error, and two-pass compilation
         // only happens when the loader finds SOME helper/partial during the first pass.
@@ -307,7 +307,7 @@ describe('handlebars-loader', function () {
       return 'some known helper';
     });
 
-    testTemplate(loader, './with-known-helpers.handlebars', {
+    testTemplate(loader, 'with-known-helpers', {
       query: '?knownHelpers[]=someKnownHelper',
       stubs: stubs
     }, function (err, output, require) {
@@ -328,7 +328,7 @@ describe('handlebars-loader', function () {
     };
     stubs[rootRelative + 'relative-partial'] = require('./relativeRoot/relative-partial.handlebars');
 
-    testTemplate(loader, './with-relative-root.handlebars', {
+    testTemplate(loader, 'with-relative-root', {
       stubs: stubs,
       query: '?helperDirs[]=' + helperDirs + '&rootRelative=' + rootRelative,
       data: TEST_TEMPLATE_DATA
@@ -349,11 +349,11 @@ describe('handlebars-loader', function () {
   });
 
   it('should find helpers and partials if inlineRequires is set', function (done) {
-    testTemplate(loader, './with-partials-helpers-inline-requires.handlebars', {
+    testTemplate(loader, 'with-partials-helpers-inline-requires', {
       query: '?inlineRequires=^images\/',
       stubs: {
-        './partial': require('./partial.handlebars'),
-        'partial': require('./partial.handlebars'),
+        './partial': require('./templates/partial.handlebars'),
+        'partial': require('./templates/partial.handlebars'),
         'title': function (text) { return 'Title: ' + text; },
         './description': function (text) { return 'Description: ' + text; },
         './image': function (text) { return 'Image URL: ' + text; },
