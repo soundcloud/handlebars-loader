@@ -1,8 +1,12 @@
 var loaderUtils = require("loader-utils");
 var createCompiler = require("./lib/compiler");
 
+console.log('wtf');
+
 module.exports = function(source) {
 	if (this.cacheable) this.cacheable();
+
+	console.log('HANDLEBARS LOADER');
 
 	var query = this.query instanceof Object ? this.query : loaderUtils.parseQuery(this.query);
 
@@ -11,6 +15,8 @@ module.exports = function(source) {
 
 	var compiler = createCompiler(require(runtimePath), inline);
 	var template = compiler(source);
+
+	console.log(template);
 
 	// export as module if template is not blank
 	return template
